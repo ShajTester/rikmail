@@ -1,0 +1,18 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+         "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node>
+	<interface name="xyz.openbmc_project.ares.rikmail">
+		<method name="SMTPParams">
+			<arg name="addr" direction="in" type="s"/>
+            <arg name="ev1" direction="in" type="b"/>
+            <arg name="ev2" direction="in" type="b"/>
+            <arg name="ev3" direction="in" type="b"/>
+            <arg name="ev4" direction="in" type="b"/>
+            <arg name="ev5" direction="in" type="b"/>
+            <arg name="ev6" direction="in" type="b"/>
+            <arg name="ev7" direction="in" type="b"/>
+            <arg name="ev8" direction="in" type="b"/>
+			<arg name="response" direction="out" type="av"/>
+		</method>
+	</interface>
+</node>
