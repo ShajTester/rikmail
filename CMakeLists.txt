@@ -54,8 +54,11 @@ target_link_libraries(${PROJECT_NAME}
 # configure_file(${PROJECT_SOURCE_DIR}/src/conf.json /tmp/rikmail/conf.json COPYONLY)
 
 install (TARGETS ${PROJECT_NAME}   RUNTIME DESTINATION bin)
-install (FILES   ${PROJECT_SOURCE_DIR}/rikmail.service   DESTINATION /lib/systemd/system    COMPONENT init)
 # install (FILES   ${PROJECT_SOURCE_DIR}/src/conf.json    DESTINATION /etc/rikmail    COMPONENT config)
+install (FILES   ${PROJECT_SOURCE_DIR}/rikmail.service       DESTINATION /lib/systemd/system    COMPONENT init)
+install (FILES   ${PROJECT_SOURCE_DIR}/send-report.service   DESTINATION /lib/systemd/system    COMPONENT init)
+install (FILES   ${PROJECT_SOURCE_DIR}/send-report.timer     DESTINATION /lib/systemd/system    COMPONENT init)
+install (PROGRAMS   ${PROJECT_SOURCE_DIR}/send-report.sh     DESTINATION bin)
 
 # https://stackoverflow.com/questions/35765106/symbolic-links-cmake
 

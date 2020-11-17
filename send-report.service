@@ -1,0 +1,10 @@
+[Unit]
+Description=rikmail send-report service
+Wants=send-report.timer
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/send-report.sh
+
+[Install]
+WantedBy=multy-user.terget

@@ -3,7 +3,9 @@
 
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <fstream>
+#include <algorithm>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -42,10 +44,38 @@ using json = nlohmann::json;
 
 // #define RIKFAN_DEBUG
 
-// gboolean (*handle_smtpparams) (
-//   XyzOpenbmc_projectAresRikmail *object,
-//   GDBusMethodInvocation *invocation,
-//   const gchar *arg_greeting);
+
+class NotImplementedException : public std::logic_error
+{
+public:
+    NotImplementedException() : std::logic_error("Function not implemented yet") { };
+};
+
+
+void rikmail_set_timer(const std::string &time_str)
+{
+    constexpr auto send_report_timer = "/lib/systemd/system/send-report.timer";
+    // constexpr auto dest = "org.freedesktop.systemd1";
+    // constexpr auto path = "/org/freedesktop/systemd1";
+    // constexpr auto interface = "org.freedesktop.systemd1.Manager";
+
+    std::string cmd = "sed -i 's/OnCalendar.*/OnCalendar=";
+    std::for_each(time_str.begin(), time_str.end(), [&cmd](const char c)
+            {
+                if(c == '*')
+                    cmd += "\\*";
+                else
+                    cmd += c;
+            });
+    cmd += "/g' ";
+    cmd += send_report_timer;
+    syslog(LOG_INFO, "%s", cmd.c_str());
+
+    system(cmd.c_str());
+    system("systemctl daemon-reload");
+    system("systemctl restart send-report.timer");
+    // throw NotImplementedException();
+}
 
 
 
@@ -62,12 +92,11 @@ static gboolean on_handle_apply_SMTPParams (XyzOpenbmc_projectAresRikmail *inter
         gboolean ev8
                                            )
 {
-    // syslog(LOG_INFO, "%s", __PRETTY_FUNCTION__);
-
-    syslog(LOG_INFO, "greeting:5:: %s", addr);
-
     std::string out_email;
+    std::stringstream report_str;
 
+    // syslog(LOG_INFO, "%s", __PRETTY_FUNCTION__);
+    syslog(LOG_INFO, "greeting:5:: %s", addr);
 
     if (strcmp(addr, "start") == 0)
     {
@@ -80,6 +109,7 @@ static gboolean on_handle_apply_SMTPParams (XyzOpenbmc_projectAresRikmail *inter
         ev6 = FALSE;
         ev7 = FALSE;
         ev8 = FALSE;
+        report_str << "Initial call. Retreive data from config." << std::endl;
     }
     else
     {
@@ -120,6 +150,7 @@ static gboolean on_handle_apply_SMTPParams (XyzOpenbmc_projectAresRikmail *inter
                     // mail.AddAttachment("c:\\test2.jpg");
 
                     mail.Send();
+                    report_str << "Send test message to " << out_email << std::endl;
                 }
                 catch (ECSmtp e)
                 {
@@ -138,8 +169,52 @@ static gboolean on_handle_apply_SMTPParams (XyzOpenbmc_projectAresRikmail *inter
 
             ev1 = FALSE;
         }
-        ev3 = ev2;
-        ev2 = FALSE;
+        if(ev2)
+        {
+            // Настройка таймера: *-*-* *:00,30:00
+            try
+            {
+                rikmail_set_timer("*-*-* *:00,30:00");
+                report_str << "Set timer to 2 times of hour" << std::endl;
+            }
+            catch (const std::exception &e)
+            {
+                report_str << "Error on set timer: " << e.what() << std::endl;
+            }
+            ev3 = FALSE;
+            ev4 = FALSE;
+        }
+        else if(ev3)
+        {
+            // Настройка таймера: *-*-* 22:15:00
+            try
+            {
+                rikmail_set_timer("*-*-* 22:15:00");
+                report_str << "Set timer to 1 times of day" << std::endl;
+            }
+            catch (const std::exception &e)
+            {
+                report_str << "Error on set timer: " << e.what() << std::endl;
+            }
+            ev2 = FALSE;
+            ev4 = FALSE;
+        }
+        else if(ev4)
+        {
+            // Настройка таймера: *-*-* *:00/15:00
+            try
+            {
+                rikmail_set_timer("*-*-* *:00/15:00");
+                report_str << "Set timer to 4 times of hour" << std::endl;
+            }
+            catch (const std::exception &e)
+            {
+                report_str << "Error on set timer: " << e.what() << std::endl;
+            }
+            ev2 = FALSE;
+            ev3 = FALSE;
+        }
+
     }
 
     // https://developer.gnome.org/glib/stable/glib-GVariant.html
@@ -157,6 +232,7 @@ static gboolean on_handle_apply_SMTPParams (XyzOpenbmc_projectAresRikmail *inter
     g_variant_builder_add (&builder, "v", g_variant_new_boolean (ev6));
     g_variant_builder_add (&builder, "v", g_variant_new_boolean (ev7));
     g_variant_builder_add (&builder, "v", g_variant_new_boolean (ev8));
+    g_variant_builder_add (&builder, "v", g_variant_new_string (report_str.str().c_str()));
     g_variant_builder_close (&builder);
 
 

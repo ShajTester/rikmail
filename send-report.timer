@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer for rikmail send-report service
+Requres=send-report.service
+
+[Timer]
+Unit=send-report.service
+OnCalendar=*-*-* 9,12,15,18:30:00
+
+[Install]
+WantedBy=timers.target
