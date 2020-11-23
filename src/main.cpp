@@ -45,13 +45,6 @@ using json = nlohmann::json;
 // #define RIKFAN_DEBUG
 
 
-class NotImplementedException : public std::logic_error
-{
-public:
-    NotImplementedException() : std::logic_error("Function not implemented yet") { };
-};
-
-
 void rikmail_set_timer(const std::string &time_str)
 {
     constexpr auto send_report_timer = "/lib/systemd/system/send-report.timer";
@@ -64,17 +57,22 @@ void rikmail_set_timer(const std::string &time_str)
             {
                 if(c == '*')
                     cmd += "\\*";
+                else if (c == '/')
+                    cmd += "\\/";
                 else
                     cmd += c;
             });
     cmd += "/g' ";
     cmd += send_report_timer;
-    syslog(LOG_INFO, "%s", cmd.c_str());
+    
+    syslog(LOG_DEBUG, "%s", cmd.c_str());
 
-    system(cmd.c_str());
-    system("systemctl daemon-reload");
-    system("systemctl restart send-report.timer");
-    // throw NotImplementedException();
+    int ret_code = 0;
+    ret_code += system(cmd.c_str());
+    ret_code += system("systemctl daemon-reload");
+    ret_code += system("systemctl restart send-report.timer");
+    if(ret_code)
+        throw std::runtime_error("Errors occurred while setting timer");
 }
 
 
@@ -150,23 +148,18 @@ static gboolean on_handle_apply_SMTPParams (XyzOpenbmc_projectAresRikmail *inter
                     // mail.AddAttachment("c:\\test2.jpg");
 
                     mail.Send();
-                    report_str << "Send test message to " << out_email << std::endl;
+                    report_str << "A test message was sent to " << out_email << std::endl;
+                    syslog(LOG_INFO, "Test message sent successfully.");
                 }
                 catch (ECSmtp e)
                 {
                     // std::cout << "Error: " << e.GetErrorText().c_str() << ".\n";
-                    syslog(LOG_ERR, "Error: %s", e.GetErrorText().c_str());
-                    bError = true;
-                }
-
-                if (!bError)
-                {
-                    // std::cout << "Mail was send successfully.\n";
-                    syslog(LOG_INFO, "Mail was send successfully.");
+                    report_str << "An error occurred while sending test message: " 
+                            << e.GetErrorText().c_str() << std::endl;
+                    syslog(LOG_ERR, "An error occurred while sending test message: %s", 
+                            e.GetErrorText().c_str());
                 }
             }
-            
-
             ev1 = FALSE;
         }
         if(ev2)
@@ -175,11 +168,11 @@ static gboolean on_handle_apply_SMTPParams (XyzOpenbmc_projectAresRikmail *inter
             try
             {
                 rikmail_set_timer("*-*-* *:00,30:00");
-                report_str << "Set timer to 2 times of hour" << std::endl;
+                report_str << "Timer set at 2 times per hour" << std::endl;
             }
             catch (const std::exception &e)
             {
-                report_str << "Error on set timer: " << e.what() << std::endl;
+                report_str << "Timer setting error: " << e.what() << std::endl;
             }
             ev3 = FALSE;
             ev4 = FALSE;
@@ -190,11 +183,11 @@ static gboolean on_handle_apply_SMTPParams (XyzOpenbmc_projectAresRikmail *inter
             try
             {
                 rikmail_set_timer("*-*-* 22:15:00");
-                report_str << "Set timer to 1 times of day" << std::endl;
+                report_str << "The timer is set for 1 actuation per day" << std::endl;
             }
             catch (const std::exception &e)
             {
-                report_str << "Error on set timer: " << e.what() << std::endl;
+                report_str << "Timer setting error: " << e.what() << std::endl;
             }
             ev2 = FALSE;
             ev4 = FALSE;
@@ -205,11 +198,11 @@ static gboolean on_handle_apply_SMTPParams (XyzOpenbmc_projectAresRikmail *inter
             try
             {
                 rikmail_set_timer("*-*-* *:00/15:00");
-                report_str << "Set timer to 4 times of hour" << std::endl;
+                report_str << "Timer set at 4 times per hour" << std::endl;
             }
             catch (const std::exception &e)
             {
-                report_str << "Error on set timer: " << e.what() << std::endl;
+                report_str << "Timer setting error: " << e.what() << std::endl;
             }
             ev2 = FALSE;
             ev3 = FALSE;
@@ -311,10 +304,17 @@ int main(int argc, char const *argv[])
 {
     openlog("rikmail", LOG_CONS, LOG_USER);
 
+#ifdef RIKMAIL_DEBUG
+    setlogmask(LOG_UPTO(LOG_DEBUG));
+    syslog(LOG_DEBUG, "LOG_UPTO = 0x%x", LOG_UPTO(LOG_DEBUG));
+#else // RIKMAIL_DEBUG
+    setlogmask(LOG_UPTO(LOG_ERR));
+#endif // RIKMAIL_DEBUG
+
     // set up the SIGINT signal handler
     if (signal(SIGINT, &sig_handler) == SIG_ERR)
     {
-        syslog(LOG_INFO, "Failed to register SIGINT handler, quitting...\n");
+        syslog(LOG_ERR, "Failed to register SIGINT handler, quitting...\n");
         exit(EXIT_FAILURE);
     }
 

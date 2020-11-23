@@ -15,9 +15,8 @@ include_directories("${PROJECT_SOURCE_DIR}/inc")
 include_directories("${PROJECT_SOURCE_DIR}/src")
 
 # add_compile_definitions(LINUX)
-
 #                    COMMAND ${CMAKE_COMMAND} -E chdir ${PROJECT_SOURCE_DIR}/src gdbus-codegen --generate-c-code rikmail-manager --interface-prefix xyz.ares.rikmail. ${PROJECT_SOURCE_DIR}/src/xyz.ares.rikmail.xml
-
+add_compile_definitions(RIKMAIL_DEBUG)
 
 ADD_CUSTOM_COMMAND( OUTPUT rikmail-manager.h rikmail-manager.c
                     COMMAND gdbus-codegen --generate-c-code rikmail-manager --interface-prefix xyz.ares.rikmail. ${PROJECT_SOURCE_DIR}/src/xyz.openbmc_project.ares.rikmail.xml
